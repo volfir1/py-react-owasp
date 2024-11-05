@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Search, Users as UsersIcon } from 'lucide-react';
 import '../styles/users.css';
+
 const Users = () => {
   const [userId, setUserId] = useState('');
   const [users, setUsers] = useState(null);
@@ -11,12 +13,7 @@ const Users = () => {
     setError(null);
     
     try {
-      const url = id 
-        ? `/api/users?id=${id}`
-        : '/api/users';
-        
-      console.log('Fetching:', url);
-      
+      const url = id ? `/api/users?id=${id}` : '/api/users';
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -25,15 +22,9 @@ const Users = () => {
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      
-      if (data.status === 'error') {
-        throw new Error(data.message);
-      }
+      if (data.status === 'error') throw new Error(data.message);
       
       setUsers(data.data);
       setError(null);
@@ -56,89 +47,85 @@ const Users = () => {
   }, []);
 
   return (
-    <div className="main-container">
-      <div className="container py-4">
-        <div className="content-card glass-effect p-4">
-          <h1 className="brand-text mb-4">User Management</h1>
+    <div className="page-container">
+      <div className="content-wrapper">
+        <div className="header-section">
+          <div className="d-flex align-items-center gap-2 mb-4">
+            <UsersIcon size={28} className="text-primary" />
+            <h1 className="heading-text">User Management</h1>
+          </div>
           
-          <div className="card mb-4">
-            <div className="card-body">
-              <form onSubmit={handleSubmit} className="row g-3 align-items-center">
-                <div className="col-sm-11">
+          <div className="search-card">
+            <form onSubmit={handleSubmit} className="search-form">
+              <div className="input-wrapper">
+                <div className="search-input-group">
+                  <Search size={20} className="search-icon" />
                   <input
                     type="text"
-                    className="form-control"
+                    className="modern-input"
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
-                    placeholder="Enter user ID (optional)"
+                    placeholder="Search by User ID"
                   />
                 </div>
-                <div className="col-sm-1">
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary w-100"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="spinner-border spinner-border-sm" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                    ) : (
-                      'Search'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          {error && (
-            <div className="alert alert-danger" role="alert">
-              {error}
-            </div>
-          )}
-          
-          {isLoading && (
-            <div className="text-center py-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
+                <button 
+                  type="submit" 
+                  className="search-button"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Searching...' : 'Search'}
+                </button>
               </div>
-            </div>
-          )}
-          
-          {users && !isLoading && (
-            <div className="table-responsive">
-              {users.length > 0 ? (
-                <table className="table table-hover">
+            </form>
+          </div>
+        </div>
+
+        {error && (
+          <div className="error-alert">
+            <p>{error}</p>
+          </div>
+        )}
+        
+        {isLoading && (
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+          </div>
+        )}
+        
+        {users && !isLoading && (
+          <div className="table-card">
+            {users.length > 0 ? (
+              <div className="table-responsive">
+                <table className="modern-table">
                   <thead>
                     <tr>
-                      <th scope="col">ID</th>
-                      <th scope="col">Username</th>
-                      <th scope="col">First Name</th>
-                      <th scope="col">Last Name</th>
-                      <th scope="col">Email</th>
+                      <th>ID</th>
+                      <th>Username</th>
+                      <th>First Name</th>
+                      <th>Last Name</th>
+                      <th>Email</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.id}>
-                        <td>{user.id}</td>
-                        <td>{user.username}</td>
+                        <td className="id-cell">{user.id}</td>
+                        <td className="username-cell">{user.username}</td>
                         <td>{user.firstname}</td>
                         <td>{user.lastname}</td>
-                        <td>{user.email}</td>
+                        <td className="email-cell">{user.email}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              ) : (
-                <div className="alert alert-info text-center">
-                  No users found
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            ) : (
+              <div className="no-results">
+                <p>No users found</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
