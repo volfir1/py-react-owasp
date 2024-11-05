@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Users from './pages/Users';
-import Navbar from './components/Navbar';
+import Layout from './components/Layout';
+import LoginPage from './pages/Login';
 
 // Create a theme instance
 const theme = createTheme({
@@ -47,22 +48,58 @@ const theme = createTheme({
         },
       },
     },
+    // Add more component customizations
+    MuiContainer: {
+      styleOverrides: {
+        maxWidthXl: {
+          maxWidth: '1400px !important',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: '1rem',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+        },
+      },
+    },
   },
 });
 
+// You can create a simple Home component
+const Home = () => (
+  <div>
+    <h1>Welcome to DSVPWA</h1>
+    <p>This is the home page of your application.</p>
+  </div>
+);
+
 function App() {
+  const appInfo = {
+    project: "DSVPWA",
+    author: "Your Name",
+    version: "1.0.0"
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <div className="app">
-          <Navbar project="DSVPWA" />
-          <Routes>
-            <Route path="/" element={<div>Home Page</div>} />
+        <Routes>
+          {/* Public route for login */}
+          <Route path="/login" element={<LoginPage {...appInfo} />} />
+
+          {/* Protected routes wrapped in Layout */}
+          <Route element={<Layout {...appInfo} />}>
+            <Route path="/" element={<Home />} />
             <Route path="/users" element={<Users />} />
-            <Route path="/login" element={<div>Login Page</div>} />
-          </Routes>
-        </div>
+            {/* Add more routes here */}
+            
+            {/* Redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
       </Router>
     </ThemeProvider>
   );
