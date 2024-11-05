@@ -1,7 +1,93 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bug, Menu, X, LogIn } from 'lucide-react';
-import '../styles/navbar.css'
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Box,
+  Container,
+  Typography,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+// Styled components
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  backgroundColor: 'white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+}));
+
+const StyledToolbar = styled(Toolbar)({
+  justifyContent: 'space-between',
+  padding: '0.5rem 0',
+});
+
+const NavButton = styled(Button)(({ theme, active }) => ({
+  marginLeft: '1rem',
+  color: active ? '#3a86ff' : '#4a5568',
+  '&:hover': {
+    backgroundColor: 'transparent',
+    color: '#3a86ff',
+  },
+  fontWeight: active ? 600 : 500,
+  textTransform: 'none',
+  fontSize: '1rem',
+}));
+
+const LoginButton = styled(Button)(({ theme }) => ({
+  marginLeft: '1rem',
+  backgroundColor: '#3a86ff',
+  color: 'white',
+  '&:hover': {
+    backgroundColor: '#2872ff',
+  },
+  textTransform: 'none',
+  borderRadius: '0.75rem',
+  padding: '0.5rem 1.25rem',
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+}));
+
+const LogoLink = styled(Link)({
+  display: 'flex',
+  alignItems: 'center',
+  textDecoration: 'none',
+  color: '#2d3748',
+  gap: '0.5rem',
+});
+
+const BrandText = styled(Typography)({
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  background: 'linear-gradient(120deg, #3a86ff, #8338ec)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+});
+
+const MobileNavList = styled(List)({
+  paddingTop: '1rem',
+});
+
+const MobileNavItem = styled(ListItem)({
+  padding: '0.75rem 1.5rem',
+});
+
+const MobileNavLink = styled(Link)(({ active }) => ({
+  textDecoration: 'none',
+  color: active ? '#3a86ff' : '#4a5568',
+  fontWeight: active ? 600 : 500,
+  display: 'flex',
+  alignItems: 'center',
+  width: '100%',
+}));
+
 const Navbar = ({ project }) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -11,77 +97,90 @@ const Navbar = ({ project }) => {
     { path: '/users', label: 'Users' }
   ];
 
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <div className="navbar-content">
-          {/* Logo */}
-          <Link to="/" className="navbar-brand">
-            <Bug className="navbar-logo" />
-            <span className="navbar-brand-text">{project}</span>
-          </Link>
+    <>
+      <StyledAppBar position="sticky">
+        <Container maxWidth="xl">
+          <StyledToolbar>
+            <LogoLink to="/">
+              <Bug size={28} color="#3a86ff" />
+              <BrandText variant="h6">{project}</BrandText>
+            </LogoLink>
 
-          {/* Desktop Navigation */}
-          <div className="navbar-menu-desktop">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-link ${
-                  location.pathname === item.path ? 'active' : ''
-                }`}
+            {/* Desktop Navigation */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+              {navItems.map((item) => (
+                <NavButton
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  active={isActive(item.path)}
+                >
+                  {item.label}
+                </NavButton>
+              ))}
+              <LoginButton
+                component={Link}
+                to="/login"
+                startIcon={<LogIn size={20} />}
               >
-                {item.label}
-              </Link>
-            ))}
+                Login
+              </LoginButton>
+            </Box>
 
-            {/* Login Link */}
-            <Link to="/login" className="nav-link-login">
-              <LogIn className="login-icon" />
-              <span>Login</span>
-            </Link>
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="navbar-mobile-toggle">
-            <button
+            {/* Mobile menu button */}
+            <IconButton
+              sx={{ display: { xs: 'flex', md: 'none' }, color: '#4a5568' }}
               onClick={() => setIsOpen(!isOpen)}
-              className="mobile-menu-button"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
+            </IconButton>
+          </StyledToolbar>
+        </Container>
+      </StyledAppBar>
 
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="navbar-menu-mobile">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
+      {/* Mobile Navigation Drawer */}
+      <Drawer
+        anchor="right"
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        PaperProps={{
+          sx: {
+            width: '240px',
+            backgroundImage: 'linear-gradient(135deg, #f6f7ff 0%, #f0f2ff 100%)',
+          }
+        }}
+      >
+        <MobileNavList>
+          {navItems.map((item) => (
+            <MobileNavItem key={item.path} disablePadding>
+              <MobileNavLink
                 to={item.path}
+                active={isActive(item.path)}
                 onClick={() => setIsOpen(false)}
-                className={`nav-link-mobile ${
-                  location.pathname === item.path ? 'active' : ''
-                }`}
               >
-                {item.label}
-              </Link>
-            ))}
-
-            {/* Mobile Login Link */}
-            <Link
+                <ListItemText primary={item.label} />
+              </MobileNavLink>
+            </MobileNavItem>
+          ))}
+          <MobileNavItem disablePadding>
+            <MobileNavLink
               to="/login"
               onClick={() => setIsOpen(false)}
-              className="nav-link-login-mobile"
+              sx={{
+                color: '#3a86ff',
+                gap: '0.5rem',
+              }}
             >
-              <LogIn className="login-icon" />
-              <span>Login</span>
-            </Link>
-          </div>
-        )}
-      </div>
-    </nav>
+              <LogIn size={20} />
+              <ListItemText primary="Login" />
+            </MobileNavLink>
+          </MobileNavItem>
+        </MobileNavList>
+      </Drawer>
+    </>
   );
 };
 

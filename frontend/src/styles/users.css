@@ -209,3 +209,157 @@
   background: #3a86ff;
   border-radius: 3px;
 }
+
+
+page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f6f7ff 0%, #f0f2ff 100%);
+  padding: 2rem;
+}
+
+.content-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-section {
+  margin-bottom: 2rem;
+}
+
+.heading-text {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+  background: linear-gradient(120deg, #3a86ff, #8338ec);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.search-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.data-grid-card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.search-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-input-group {
+  display: flex;
+  align-items: center;
+  background: #f8faff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  flex: 1;
+}
+
+.search-icon {
+  color: #3a86ff;
+  margin-right: 0.75rem;
+}
+
+.modern-input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  color: #2d3748;
+}
+
+.modern-input:focus {
+  outline: none;
+}
+
+.modern-input::placeholder {
+  color: #a0aec0;
+}
+
+.search-button {
+  background: linear-gradient(135deg, #3a86ff, #3a86ff);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-button:hover {
+  background: linear-gradient(135deg, #2872ff, #2872ff);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(58, 134, 255, 0.2);
+}
+
+.search-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error-alert {
+  background: #fff5f5;
+  border-left: 4px solid #f56565;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Custom styles for MUI DataGrid */
+.MuiDataGrid-root {
+  border: none !important;
+  font-family: inherit !important;
+}
+
+.MuiDataGrid-columnHeader {
+  background-color: #f8faff !important;
+  color: #2d3748 !important;
+  font-weight: 600 !important;
+}
+
+.text-primary {
+  color: #3a86ff;
+}
+
+.text-gray-600 {
+  color: #718096;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 1rem;
+  }
+  
+  .input-wrapper {
+    flex-direction: column;
+  }
+  
+  .search-button {
+    width: 100%;
+  }
+}
