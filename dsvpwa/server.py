@@ -3,9 +3,18 @@ import sqlite3
 import subprocess
 import xml.etree.ElementTree as ET
 import os
-import time
+import time 
 
 app = Flask(__name__)
+
+
+# Add a test endpoint
+@app.route('/api/test')
+def test_connection():
+    return jsonify({
+        "status": "success",
+        "message": "Flask backend is running"
+    })
 
 def get_db():
     if 'db' not in g:
@@ -169,8 +178,7 @@ def internal_error(error):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
-        
+    app.run(debug=True, port=5000)
 # #orignial code 
 # class VulnHTTPServer(ThreadingHTTPServer):
 #     users = []
