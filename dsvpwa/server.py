@@ -1,184 +1,190 @@
-from flask import Flask, render_template, request, jsonify, g
+from flask import Flask, jsonify, request, g
+from flask_cors import CORS
 import sqlite3
-import subprocess
+import logging
 import xml.etree.ElementTree as ET
 import os
-import time 
 
 app = Flask(__name__)
+CORS(app)
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-# Add a test endpoint
-@app.route('/api/test')
-def test_connection():
-    return jsonify({
-        "status": "success",
-        "message": "Flask backend is running"
-    })
+# Global database connection
+_connection = None
 
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(
+def get_global_db():
+    global _connection
+    if _connection is None:
+        _connection = sqlite3.connect(
             'file::memory:?cache=shared',
             uri=True,
             check_same_thread=False
         )
-        g.db.row_factory = sqlite3.Row
+        _connection.row_factory = sqlite3.Row
+    return _connection
+
+def get_db():
+    if 'db' not in g:
+        g.db = get_global_db()
     return g.db
 
-def load_attacks():
-    tree = ET.parse('./db/attacks.xml')
-    attacks = []
-    for attack in tree.findall('attack'):
-        attacks.append({
-            'title': attack.findtext('title'),
-            'route': attack.findtext('route'),
-            'description': attack.findtext('description')
-        })
-    return attacks
+def find_project_root():
+    """Find the DSVPWA root directory"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        if os.path.exists(os.path.join(current_dir, 'db', 'users.xml')):
+            logger.debug(f"Found project root at: {current_dir}")
+            return current_dir
+        parent = os.path.dirname(current_dir)
+        if parent == current_dir:  # Reached root directory
+            raise FileNotFoundError("Could not find project root with users.xml")
+        current_dir = parent
 
-@app.route('/')
-def index():
-    return render_template('index.html', 
-                         attacks=load_attacks(),
-                         content="Welcome to DSVPWA")
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        db = get_db()
-        try:
-            # Deliberately vulnerable to SQL injection
-            query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
-            user = db.execute(query).fetchone()
-            if user:
-                return redirect('/')
-            error = "Invalid credentials"
-        except Exception as e:
-            error = str(e)
-    
-    return render_template('login.html', 
-                         attacks=load_attacks(),
-                         error=error)
-
-@app.route('/users')
-def users():
-    db = get_db()
-    user_id = request.args.get('id', '')
+def load_users_from_xml():
     try:
-        # SQL Injection vulnerability
-        query = f"SELECT * FROM users WHERE id={user_id}"
-        users = db.execute(query).fetchall()
-        content = render_template('users_table.html', users=users)
+        # Find project root and construct path to users.xml
+        project_root = find_project_root()
+        xml_path = os.path.join(project_root, 'db', 'users.xml')
+        
+        logger.debug(f"Attempting to load XML from: {xml_path}")
+        
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        users = []
+        
+        for user in root.findall('user'):
+            user_id = int(user.get('id'))  # Get the ID from XML
+            users.append((
+                user_id,
+                user.find('username').text,
+                user.find('firstname').text,
+                user.find('lastname').text,
+                user.find('email').text,
+                user.find('password').text,
+                ''  # SESSION
+            ))
+            
+        logger.debug(f"Successfully loaded {len(users)} users from XML")
+        return users
     except Exception as e:
-        content = str(e)
-    
-    return render_template('users.html',
-                         attacks=load_attacks(),
-                         content=content)
+        logger.error(f"Error loading users from XML: {e}")
+        raise
 
-@app.route('/post')
-def post():
-    # XSS Reflected vulnerability
-    msg = request.args.get('msg', 'No message')
-    return render_template('post.html',
-                         attacks=load_attacks(),
-                         content=msg)
-
-@app.route('/guestbook')
-def guestbook():
+def init_db():
     db = get_db()
-    if 'comment' in request.args:
-        # XSS Stored vulnerability
-        comment = request.args.get('comment')
-        db.execute('INSERT INTO comments (comment, time) VALUES (?, ?)',
-                  [comment, time.ctime()])
+    logger.debug("Initializing database...")
+    
+    try:
+        # Create tables
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS users(
+                id INTEGER PRIMARY KEY,
+                username TEXT,
+                firstname TEXT,
+                lastname TEXT,
+                email TEXT,
+                password TEXT,
+                session TEXT
+            )
+        ''')
+        
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS comments(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                comment TEXT,
+                time TEXT
+            )
+        ''')
+        
+        # Clear existing users
+        db.execute("DELETE FROM users")
+        
+        # Load and insert users from XML
+        users = load_users_from_xml()
+        db.executemany('''
+            INSERT INTO users(id, username, firstname, lastname, email, password, session)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+        ''', users)
+        
         db.commit()
-        content = 'Thank you for your comment!'
-    else:
-        comments = db.execute('SELECT * FROM comments ORDER BY time DESC').fetchall()
-        content = render_template('comments_table.html', comments=comments)
-    
-    return render_template('guestbook.html',
-                         attacks=load_attacks(),
-                         content=content)
-
-@app.route('/diag')
-def diagnostics():
-    if app.config.get('RISK_LEVEL', 0) < 3:
-        content = 'This feature requires higher risk level'
-    else:
-        domain = request.args.get('domain', '')
-        if domain:
-            # Command Injection vulnerability
-            command = 'nslookup' if os.name == 'nt' else 'host'
-            try:
-                output = subprocess.check_output(
-                    f'{command} {domain}',
-                    shell=True,
-                    stderr=subprocess.STDOUT,
-                    text=True
-                )
-                content = f'<pre>{output}</pre>'
-            except subprocess.CalledProcessError as e:
-                content = str(e)
-        else:
-            content = 'Please enter a domain'
-    
-    return render_template('diag.html',
-                         attacks=load_attacks(),
-                         content=content)
-
-@app.route('/docs')
-def documents():
-    path = request.args.get('path', 'docs/cursus.txt')
-    try:
-        # Path Traversal vulnerability
-        with open(path, 'r') as f:
-            content = f'<pre>{f.read()}</pre>'
+        logger.debug("Database initialized successfully with XML data")
+        
+        # Log the inserted users for verification
+        result = db.execute("SELECT id, username FROM users ORDER BY id").fetchall()
+        logger.debug("Inserted users:")
+        for row in result:
+            logger.debug(f"ID: {row['id']}, Username: {row['username']}")
+            
     except Exception as e:
-        content = str(e)
-    
-    return render_template('docs.html',
-                         attacks=load_attacks(),
-                         content=content)
+        logger.error(f"Database initialization error: {e}")
+        # If XML loading fails, insert default users
+        default_users = [
+            (0, 'admin', 'Administrator', 'Administrator', 'admin@localhost', 'admin123', ''),
+            (1, 'guest', 'Guest', 'User', 'guest@localhost', 'guest123', '')
+        ]
+        db.executemany('''
+            INSERT INTO users(id, username, firstname, lastname, email, password, session)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+        ''', default_users)
+        db.commit()
+        logger.debug("Database initialized with default users due to error")
 
-# Additional utility routes
-@app.route('/set_session')
-def set_session():
-    # Session Fixation vulnerability
-    session = request.args.get('session')
-    response = redirect(request.args.get('path', '/'))
-    if session:
-        response.set_cookie('SESSIONID', session)
-    return response
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    try:
+        db = get_db()
+        user_id = request.args.get('id')
+        
+        if not user_id:
+            query = "SELECT id, username, firstname, lastname, email FROM users ORDER BY id"
+            params = []
+        else:
+            query = "SELECT id, username, firstname, lastname, email FROM users WHERE id = ?"
+            params = [user_id]
+        
+        logger.debug(f"Executing query: {query} with params: {params}")
+        
+        cursor = db.execute(query, params)
+        result = cursor.fetchall()
+        
+        users_list = [{
+            'id': row['id'],
+            'username': row['username'],
+            'firstname': row['firstname'],
+            'lastname': row['lastname'],
+            'email': row['email']
+        } for row in result]
+        
+        logger.debug(f"Found users: {users_list}")
+        
+        return jsonify({
+            'status': 'success',
+            'data': users_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in /api/users endpoint: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
-@app.route('/check_session')
-def check_session():
-    # Session Hijacking check
-    db = get_db()
-    session_id = request.cookies.get('SESSIONID')
-    if session_id:
-        user = db.execute('SELECT * FROM users WHERE session = ?', 
-                         [session_id]).fetchone()
-        if user:
-            return f'Logged in as {user["username"]}'
-    return 'Not logged in'
+@app.route('/api/test', methods=['GET'])
+def test():
+    return jsonify({
+        'status': 'success',
+        'message': 'API is working'
+    })
 
-# Error handlers
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return render_template('500.html'), 500
+# Initialize database when starting the app
+with app.app_context():
+    init_db()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
 # #orignial code 
 # class VulnHTTPServer(ThreadingHTTPServer):
 #     users = []
