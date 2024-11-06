@@ -178,10 +178,93 @@ def test():
         'message': 'API is working'
     })
 
+@app.route('/api/comments', methods=['GET'])
+def get_comments():
+    try:
+        db = get_db()
+        # Get all comments ordered by time
+        query = "SELECT * FROM comments ORDER BY time DESC LIMIT 100"  # Limit to prevent overload
+        cursor = db.execute(query)
+        comments = cursor.fetchall()
+        
+        return jsonify({
+            'status': 'success',
+            'comments': [{
+                'comment': row['comment'],
+                'time': row['time']
+            } for row in comments]
+        })
+    except Exception as e:
+        logger.error(f"Error in /api/comments endpoint: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/comment', methods=['GET'])
+def post_comment():
+    try:
+        db = get_db()
+        msg = request.args.get('msg')
+        
+        if msg:
+            # Add timestamp to prevent exact duplicates
+            current_time = datetime.datetime.now().isoformat()
+            query = f"INSERT INTO comments (comment, time) VALUES ('{msg}', '{current_time}')"
+            db.execute(query)
+            db.commit()
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Comment posted successfully'
+            })
+    except Exception as e:
+        logger.error(f"Error in post_comment endpoint: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 # Initialize database when starting the app
 with app.app_context():
     init_db()
 
+# Add these routes:
+@app.route('/xss', methods=['GET'])
+def xss_test():
+    try:
+        msg = request.args.get('msg', '')
+        # Intentionally vulnerable - no escaping
+        return f"<div>{msg}</div>"
+    except Exception as e:
+        logger.error(f"XSS Test Error: {e}")
+        return str(e)
+
+@app.route('/sqli', methods=['GET'])
+def sql_injection():
+    try:
+        db = get_db()
+        user_id = request.args.get('id', '')
+        # Intentionally vulnerable - direct string concatenation
+        query = f"SELECT * FROM users WHERE id = {user_id}"
+        cursor = db.execute(query)
+        result = cursor.fetchall()
+        return jsonify([dict(row) for row in result])
+    except Exception as e:
+        logger.error(f"SQL Injection Test Error: {e}")
+        return str(e)
+
+@app.route('/session', methods=['GET'])
+def session_test():
+    try:
+        session_id = request.args.get('id', '')
+        response = jsonify({'message': 'Session updated'})
+        response.set_cookie('SESSIONID', session_id)
+        return response
+    except Exception as e:
+        logger.error(f"Session Test Error: {e}")
+        return str(e)
+        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
 

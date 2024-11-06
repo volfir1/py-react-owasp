@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Bug,
@@ -39,6 +39,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
+import Login from '../pages/Login';
 // Styled components (keeping your existing styles)
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: 'white',
@@ -50,14 +51,14 @@ const StyledToolbar = styled(Toolbar)({
   padding: '0.5rem 0',
 });
 
-const NavButton = styled(Button)(({ theme, active }) => ({
+const NavButton = styled(Button)(({ theme, isactive }) => ({
   marginLeft: '0.5rem',
-  color: active ? '#3a86ff' : '#4a5568',
+  color: isactive === 'true' ? '#3a86ff' : '#4a5568',
   '&:hover': {
     backgroundColor: 'transparent',
     color: '#3a86ff',
   },
-  fontWeight: active ? 600 : 500,
+  fontWeight: isactive === 'true' ? 600 : 500,
   textTransform: 'none',
   fontSize: '0.95rem',
 }));
@@ -113,10 +114,10 @@ const MobileNavItem = styled(ListItem)({
   padding: '0.75rem 1.5rem',
 });
 
-const MobileNavLink = styled(Link)(({ active }) => ({
+const MobileNavLink = styled(Link)(({ isactive }) => ({
   textDecoration: 'none',
-  color: active ? '#3a86ff' : '#4a5568',
-  fontWeight: active ? 600 : 500,
+  color: isactive === 'true' ? '#3a86ff' : '#4a5568',
+  fontWeight: isactive === 'true' ? 600 : 500,
   display: 'flex',
   alignItems: 'center',
   width: '100%',
@@ -139,6 +140,15 @@ const Navbar = ({ project }) => {
     tools: null,
     admin: null
   });
+
+  const [isPending, startTransition] = useTransition();
+  const handleNavigate = (to) => {
+    startTransition(() => {
+      setIsOpen(false);
+      // Any navigation logic here
+    });
+  };
+
   const location = useLocation();
 
   const handleMenuOpen = (menu) => (event) => {
@@ -196,7 +206,7 @@ const Navbar = ({ project }) => {
                   key={item.path}
                   component={Link}
                   to={item.path}
-                  active={location.pathname === item.path}
+                  active={location.pathname === item.path ? 1 : 0}
                   startIcon={item.icon}
                 >
                   {item.label}

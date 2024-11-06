@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -7,6 +7,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { Search, Users as UsersIcon } from 'lucide-react';
+import { useToast } from '../components/Snackbar';
 import '../styles/users.css';
 
 const Users = () => {
@@ -14,12 +15,24 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
+  const initialLoadDone = useRef(false);
 
   const fetchUsers = async (id = '') => {
     setIsLoading(true);
     setError(null);
     
     try {
+      // Only show loading toast for manual searches, not initial load
+      if (id || initialLoadDone.current) {
+        toast.info(
+          id 
+            ? `Searching for user with ID: ${id}...`
+            : 'Loading all users...',
+          { duration: 2000 }
+        );
+      }
+
       const url = id ? `/api/users?id=${id}` : '/api/users';
       const response = await fetch(url, {
         method: 'GET',
@@ -35,10 +48,29 @@ const Users = () => {
       
       setUsers(data.data);
       setError(null);
+
+      // Only show success toast if it's not the initial load
+      // or if it's a specific search
+      if (id || initialLoadDone.current) {
+        const resultCount = data.data.length;
+        if (id) {
+          toast.success(
+            resultCount === 0 
+              ? `No users found with ID: ${id}`
+              : `Found ${resultCount} user${resultCount > 1 ? 's' : ''} matching ID: ${id}`
+          );
+        } else {
+          toast.success(`Successfully loaded ${resultCount} users`);
+        }
+      }
+
+      // Mark initial load as complete after first successful load
+      initialLoadDone.current = true;
     } catch (err) {
       console.error('Error:', err);
       setError(err.message);
       setUsers([]);
+      toast.error(`Error: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -46,13 +78,34 @@ const Users = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!userId.trim()) {
+      toast.warning('Please enter a user ID to search');
+      return;
+    }
     fetchUsers(userId);
   };
 
   useEffect(() => {
+    // Initial load
     fetchUsers();
+    // No cleanup needed since we're using the ref to track initial load
   }, []);
 
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setUserId(value);
+    
+    // Clear search when input is emptied
+    if (value === '') {
+      fetchUsers();
+      // Only show toast if it's not the initial state
+      if (initialLoadDone.current) {
+        toast.info('Showing all users');
+      }
+    }
+  };
+
+  // Rest of the component remains the same...
   return (
     <div className="page-container">
       <div className="content-wrapper">
@@ -72,7 +125,7 @@ const Users = () => {
                   type="text"
                   className="modern-input"
                   value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Search by User ID"
                 />
               </div>

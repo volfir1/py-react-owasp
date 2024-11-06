@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
+import { ToastProvider } from './components/Snackbar'; // Adjust path as needed
 import Users from './pages/Users';
 import Layout from './components/Layout';
-import LoginPage from './pages/Login';
+import 'ldrs/reuleaux';
+
+// Lazy-loaded components
+const Login = lazy(() => import('./pages/Login'));
+const Messages = lazy(() => import('./pages/features/Messages'));
+
+// Loading fallback component with Reuleaux loader
+const LoadingFallback = () => (
+  <Box 
+    display="flex" 
+    justifyContent="center" 
+    alignItems="center" 
+    minHeight="100vh"
+    bgcolor="background.default"
+  >
+    <l-reuleaux
+      size="37"
+      stroke="5"
+      stroke-length="0.15"
+      bg-opacity="0.1"
+      speed="1.2"
+      color="#3a86ff"
+    ></l-reuleaux>
+  </Box>
+);
 
 // Create a theme instance
 const theme = createTheme({
@@ -48,7 +74,6 @@ const theme = createTheme({
         },
       },
     },
-    // Add more component customizations
     MuiContainer: {
       styleOverrides: {
         maxWidthXl: {
@@ -64,10 +89,41 @@ const theme = createTheme({
         },
       },
     },
+    // Add Toast-specific style overrides
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: '1rem',
+          alignItems: 'center',
+        },
+        filledSuccess: {
+          backgroundColor: '#34d399',
+        },
+        filledError: {
+          backgroundColor: '#ef4444',
+        },
+        filledWarning: {
+          backgroundColor: '#f59e0b',
+        },
+        filledInfo: {
+          backgroundColor: '#3b82f6',
+        },
+      },
+    },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          '& .MuiAlert-root': {
+            minWidth: '300px',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.12)',
+          },
+        },
+      },
+    },
   },
 });
 
-// You can create a simple Home component
+// Simple Home component
 const Home = () => (
   <div>
     <h1>Welcome to DSVPWA</h1>
@@ -85,22 +141,42 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          {/* Public route for login */}
-          <Route path="/login" element={<LoginPage {...appInfo} />} />
-
-          {/* Protected routes wrapped in Layout */}
-          <Route element={<Layout {...appInfo} />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/users" element={<Users />} />
-            {/* Add more routes here */}
-            
-            {/* Redirect unknown routes to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              {/* Public route for login */}
+              <Route 
+                path="/login" 
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Login {...appInfo} />
+                  </Suspense>
+                } 
+              />
+      
+              {/* Protected routes wrapped in Layout */}
+              <Route element={<Layout {...appInfo} />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/users" element={<Users />} />
+                
+                {/* Featured Routes */}
+                <Route 
+                  path='/messages' 
+                  element={
+                    <Suspense fallback={<LoadingFallback />}>
+                      <Messages />
+                    </Suspense>
+                  } 
+                />
+                
+                {/* Redirect unknown routes to home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
