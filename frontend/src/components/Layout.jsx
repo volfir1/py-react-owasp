@@ -1,17 +1,97 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+// src/components/Layout.jsx
+import React, { useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
-import { Box, Container, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Container, useTheme, useMediaQuery, CircularProgress } from '@mui/material';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import Navbar from './Navbar';
 
-// Styled components with improved overflow handling
+// Styled Components
+
+// Create GlobalStyles component
+export const GlobalStyles = () => {
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      :root {
+        --app-height: 100%;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        background-color: #f8faff;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        height: var(--app-height);
+      }
+
+      body {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+
+      #root {
+        height: 100%;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #3a86ff;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #2872ff;
+      }
+
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #3a86ff #f1f1f1;
+      }
+
+      @supports (-webkit-touch-callout: none) {
+        .height-100 {
+          height: -webkit-fill-available;
+        }
+      }
+    `;
+    document.head.appendChild(styleElement);
+
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
+  return null;
+};
+
 const LayoutRoot = styled('div')(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   minHeight: '100vh',
   maxWidth: '100vw',
   backgroundColor: '#f8faff',
-  overflow: 'hidden', // Prevent horizontal scroll
+  overflow: 'hidden',
   position: 'relative',
 }));
 
@@ -20,13 +100,13 @@ const MainContent = styled('main')(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   position: 'relative',
-  minHeight: `calc(100vh - ${theme.spacing(8)})`, // 64px navbar
+  minHeight: `calc(100vh - ${theme.spacing(8)})`,
   width: '100%',
   overflowX: 'hidden',
   overflowY: 'auto',
-  paddingBottom: theme.spacing(10), // Space for footer
+  paddingBottom: theme.spacing(10),
   [theme.breakpoints.down('sm')]: {
-    minHeight: `calc(100vh - ${theme.spacing(7)})`, // 56px navbar on mobile
+    minHeight: `calc(100vh - ${theme.spacing(7)})`,
     paddingBottom: theme.spacing(8),
   },
 }));
@@ -45,7 +125,7 @@ const GradientBorder = styled('div')({
 const ContentContainer = styled(Container)(({ theme }) => ({
   flexGrow: 1,
   width: '100%',
-  maxWidth: '1920px', // Maximum width for ultra-wide screens
+  maxWidth: '1920px',
   margin: '0 auto',
   padding: theme.spacing(4, 3),
   [theme.breakpoints.up('xl')]: {
@@ -57,7 +137,7 @@ const ContentContainer = styled(Container)(({ theme }) => ({
   [theme.breakpoints.down('sm')]: {
     padding: theme.spacing(2, 1),
   },
-  '& > *': { // Ensure all direct children don't overflow
+  '& > *': {
     maxWidth: '100%',
   }
 }));
@@ -67,12 +147,11 @@ const Footer = styled('footer')(({ theme }) => ({
   bottom: 0,
   left: 0,
   right: 0,
-  backgroundColor: '#fff',
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
   borderTop: '1px solid rgba(0, 0, 0, 0.05)',
   padding: theme.spacing(2, 0),
   zIndex: theme.zIndex.appBar - 1,
   backdropFilter: 'blur(8px)',
-  backgroundColor: 'rgba(255, 255, 255, 0.9)',
 }));
 
 const FooterContent = styled('div')(({ theme }) => ({
@@ -100,31 +179,67 @@ const FooterGradient = styled('div')({
   opacity: 0.7,
 });
 
-const Layout = ({ project, author, version }) => {
+const LoadingContainer = styled(Box)({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: '100vh',
+  backgroundColor: '#f8faff',
+});
+
+export const Layout = ({ project, author = "Your Company", version = "1.0.0" }) =>  {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    const publicPaths = ['/login', '/register', '/forgot-password', '/unauthorized'];
+    const isPublicPath = publicPaths.includes(location.pathname);
+    
+    if (!loading && !user && !isPublicPath) {
+      addToast('Please login to continue', { 
+        severity: 'warning',
+        duration: 4000 
+      });
+      navigate('/login', { 
+        state: { from: location.pathname },
+        replace: true 
+      });
+    }
+  }, [loading, user, navigate, location, addToast]);
+
+  // Don't render layout for public routes
+  const publicPaths = ['/login', '/register', '/forgot-password', '/unauthorized'];
+  if (publicPaths.includes(location.pathname)) {
+    return <Outlet />;
+  }
+
+  if (loading) {
+    return (
+      <LoadingContainer>
+        <CircularProgress color="primary" />
+      </LoadingContainer>
+    );
+  }
 
   return (
     <LayoutRoot>
       <Navbar project={project} />
-      
       <GradientBorder />
-      
       <MainContent>
-        <ContentContainer 
-          maxWidth={false} // Let the styled component handle max-width
-          disableGutters // We're handling padding in styled component
-        >
-          <Box 
-            sx={{ 
-              maxWidth: '100%',
-              '& > *': { maxWidth: '100%' } // Ensure all nested components respect container width
-            }}
-          >
+        <ContentContainer maxWidth={false} disableGutters>
+          <Box sx={{ 
+            maxWidth: '100%',
+            '& > *': { maxWidth: '100%' },
+            position: 'relative',
+            zIndex: 1
+          }}>
             <Outlet />
           </Box>
         </ContentContainer>
-
         <Footer>
           <FooterContent>
             <span>© {new Date().getFullYear()} {author}</span>
@@ -136,83 +251,5 @@ const Layout = ({ project, author, version }) => {
     </LayoutRoot>
   );
 };
-
-// Global styles
-const globalStyles = `
-  :root {
-    --app-height: 100%;
-  }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    background-color: #f8faff;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-    height: var(--app-height);
-  }
-
-  body {
-    position: fixed;
-    width: 100%;
-    height: 100%;
-  }
-
-  #root {
-    height: 100%;
-  }
-
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  /* Improved scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: #3a86ff;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: #2872ff;
-  }
-
-  /* Firefox scrollbar */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #3a86ff #f1f1f1;
-  }
-
-  /* Mobile height fix */
-  @supports (-webkit-touch-callout: none) {
-    .height-100 {
-      height: -webkit-fill-available;
-    }
-  }
-`;
-
-// Add this to your index.js or App.js to handle mobile viewport height
-const setAppHeight = () => {
-  const doc = document.documentElement;
-  doc.style.setProperty('--app-height', `${window.innerHeight}px`);
-};
-
-// Add these event listeners in your app initialization
-window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', setAppHeight);
-setAppHeight();
 
 export default Layout;

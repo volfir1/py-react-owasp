@@ -1,24 +1,18 @@
-import React, { useState, useTransition } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   Bug,
   Menu,
   X,
   LogIn,
-  Home,
+  LogOut,
   User,
   Users,
   MessageCircle,
-  Book,
-  ArrowUpRight,
-  FileOutput,
-  ShieldAlert,
-  FileText,
   Settings,
-  Shield,
-  AlertTriangle,
+  LayoutDashboard,
   ChevronDown,
-  LayoutDashboard
 } from 'lucide-react';
 import {
   AppBar,
@@ -36,11 +30,11 @@ import {
   Menu as MuiMenu,
   MenuItem,
   Divider,
+  Avatar,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-import Login from '../pages/Login';
-// Styled components (keeping your existing styles)
+// Styled Components
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   backgroundColor: 'white',
   boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
@@ -49,6 +43,22 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
 const StyledToolbar = styled(Toolbar)({
   justifyContent: 'space-between',
   padding: '0.5rem 0',
+});
+
+const LogoLink = styled(Link)({
+  display: 'flex',
+  alignItems: 'center',
+  textDecoration: 'none',
+  color: '#2d3748',
+  gap: '0.5rem',
+});
+
+const BrandText = styled(Typography)({
+  fontSize: '1.25rem',
+  fontWeight: 600,
+  background: 'linear-gradient(120deg, #3a86ff, #8338ec)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
 });
 
 const NavButton = styled(Button)(({ theme, isactive }) => ({
@@ -63,15 +73,15 @@ const NavButton = styled(Button)(({ theme, isactive }) => ({
   fontSize: '0.95rem',
 }));
 
-const DropdownButton = styled(Button)(({ theme }) => ({
+const UserButton = styled(Button)(({ theme }) => ({
   marginLeft: '0.5rem',
   color: '#4a5568',
+  textTransform: 'none',
+  fontSize: '0.95rem',
   '&:hover': {
     backgroundColor: 'transparent',
     color: '#3a86ff',
   },
-  textTransform: 'none',
-  fontSize: '0.95rem',
 }));
 
 const LoginButton = styled(Button)(({ theme }) => ({
@@ -89,22 +99,6 @@ const LoginButton = styled(Button)(({ theme }) => ({
   alignItems: 'center',
   gap: '0.5rem',
 }));
-
-const LogoLink = styled(Link)({
-  display: 'flex',
-  alignItems: 'center',
-  textDecoration: 'none',
-  color: '#2d3748',
-  gap: '0.5rem',
-});
-
-const BrandText = styled(Typography)({
-  fontSize: '1.25rem',
-  fontWeight: 600,
-  background: 'linear-gradient(120deg, #3a86ff, #8338ec)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-});
 
 const MobileNavList = styled(List)({
   paddingTop: '1rem',
@@ -134,21 +128,14 @@ const MenuListItem = styled(MenuItem)({
 });
 
 const Navbar = ({ project }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [anchorEls, setAnchorEls] = useState({
     features: null,
-    tools: null,
-    admin: null
+    admin: null,
+    profile: null,
   });
-
-  const [isPending, startTransition] = useTransition();
-  const handleNavigate = (to) => {
-    startTransition(() => {
-      setIsOpen(false);
-      // Any navigation logic here
-    });
-  };
-
   const location = useLocation();
 
   const handleMenuOpen = (menu) => (event) => {
@@ -159,155 +146,186 @@ const Navbar = ({ project }) => {
     setAnchorEls({ ...anchorEls, [menu]: null });
   };
 
-  // Main navigation items
-  const mainNavItems = [
-    { path: '/', label: 'Home', icon: <Home size={18} /> },
-    { path: '/profile', label: 'Profile', icon: <User size={18} /> },
-    { path: '/users', label: 'Users', icon: <Users size={18} /> },
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok && data.status === 'success') {
+        await logout();
+        navigate('/login');
+      } else {
+        console.error('Logout failed:', data.message);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      await logout();
+      navigate('/login');
+    }
+  };
+
+  // Updated navigation items based on role and routes structure
+  const getNavItems = () => {
+    // Shared items (available to both admin and student when logged in)
+    const sharedItems = [
+      { path: '/messages', label: 'Messages', icon: <MessageCircle size={18} /> },
+    ];
+
+    // Admin-specific items
+    const adminItems = [
+      { path: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+      { path: '/admin/users', label: 'Users', icon: <Users size={18} /> },
+    ];
+
+    // Student-specific items
+    const studentItems = [
+      { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    ];
+
+    if (!user) return [];
+
+    if (user.role === 'admin') {
+      return [...adminItems, ...sharedItems];
+    }
+    
+    if (user.role === 'student') {
+      return [...studentItems, ...sharedItems];
+    }
+
+    return sharedItems;
+  };
+
+  // Profile menu items with correct paths
+  const profileItems = [
+    { 
+      label: 'Dashboard', 
+      icon: <LayoutDashboard size={18} />, 
+      onClick: () => navigate(user?.role === 'admin' ? '/admin' : '/dashboard')
+    },
+    { 
+      label: 'Profile', 
+      icon: <User size={18} />, 
+      onClick: () => navigate(user?.role === 'admin' ? '/admin/profile' : '/profile')
+    },
+    { 
+      label: 'Settings', 
+      icon: <Settings size={18} />, 
+      onClick: () => navigate(user?.role === 'admin' ? '/admin/settings' : '/settings')
+    },
+    { 
+      label: 'Logout', 
+      icon: <LogOut size={18} />, 
+      onClick: handleLogout,
+      danger: true 
+    },
   ];
 
-  // Features dropdown items
-  const featureItems = [
-    { path: '/messages', label: 'Messages', icon: <MessageCircle size={18} /> },
-    { path: '/guestbook', label: 'Guestbook', icon: <Book size={18} /> },
-  ];
+  // Get navigation items based on user role
+  const navItems = getNavItems();
 
-  // Tools dropdown items
-  const toolItems = [
-    { path: '/jump', label: 'Jump', icon: <ArrowUpRight size={18} /> },
-    { path: '/extract', label: 'Extract', icon: <FileOutput size={18} /> },
-    { path: '/diagnostics', label: 'Diagnostics', icon: <ShieldAlert size={18} /> },
-    { path: '/documents', label: 'Documents', icon: <FileText size={18} /> },
-  ];
-
-  // Admin dropdown items
-  const adminItems = [
-    { path: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-    { path: '/settings', label: 'Settings', icon: <Settings size={18} /> },
-    { path: '/security', label: 'Security', icon: <Shield size={18} /> },
-    { path: '/danger', label: 'Danger Zone', icon: <AlertTriangle size={18} />, danger: true },
-  ];
+  // Check if current path is active
+  const isActivePath = (path) => {
+    if (path === '/admin' || path === '/dashboard') {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <>
       <StyledAppBar position="sticky">
         <Container maxWidth="xl">
           <StyledToolbar>
-            <LogoLink to="/">
+            <LogoLink to={user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/'}>
               <Bug size={28} color="#3a86ff" />
               <BrandText variant="h6">{project}</BrandText>
             </LogoLink>
 
             {/* Desktop Navigation */}
             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
-              {/* Main Nav Items */}
-              {mainNavItems.map((item) => (
-                <NavButton
-                  key={item.path}
+              {user ? (
+                <>
+                  {navItems.map((item) => (
+                    <NavButton
+                      key={item.path}
+                      component={Link}
+                      to={item.path}
+                      isactive={isActivePath(item.path) ? 'true' : 'false'}
+                      startIcon={item.icon}
+                    >
+                      {item.label}
+                    </NavButton>
+                  ))}
+
+                  {/* User Profile Menu */}
+                  <UserButton
+                    onClick={handleMenuOpen('profile')}
+                    startIcon={
+                      <Avatar 
+                        sx={{ 
+                          width: 28, 
+                          height: 28,
+                          bgcolor: '#3a86ff',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {user.firstname?.[0] || user.username?.[0]}
+                      </Avatar>
+                    }
+                    endIcon={<ChevronDown size={16} />}
+                  >
+                    {user.firstname || user.username}
+                  </UserButton>
+                  
+                  <MuiMenu
+                    anchorEl={anchorEls.profile}
+                    open={Boolean(anchorEls.profile)}
+                    onClose={() => handleMenuClose('profile')}
+                    PaperProps={{
+                      elevation: 3,
+                      sx: { mt: 1, borderRadius: '0.75rem' }
+                    }}
+                  >
+                    <Box sx={{ px: 2, py: 1 }}>
+                      <Typography variant="subtitle2" color="textSecondary">
+                        Signed in as
+                      </Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {user.email}
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ my: 1 }} />
+                    {profileItems.map((item) => (
+                      <MenuListItem
+                        key={item.label}
+                        onClick={() => {
+                          handleMenuClose('profile');
+                          item.onClick();
+                        }}
+                        sx={item.danger ? { color: 'red' } : {}}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </MenuListItem>
+                    ))}
+                  </MuiMenu>
+                </>
+              ) : (
+                <LoginButton
                   component={Link}
-                  to={item.path}
-                  active={location.pathname === item.path ? 1 : 0}
-                  startIcon={item.icon}
+                  to="/login"
+                  startIcon={<LogIn size={18} />}
                 >
-                  {item.label}
-                </NavButton>
-              ))}
-
-              {/* Features Dropdown */}
-              <DropdownButton
-                onClick={handleMenuOpen('features')}
-                endIcon={<ChevronDown size={16} />}
-              >
-                Features
-              </DropdownButton>
-              <MuiMenu
-                anchorEl={anchorEls.features}
-                open={Boolean(anchorEls.features)}
-                onClose={() => handleMenuClose('features')}
-                PaperProps={{
-                  elevation: 3,
-                  sx: { mt: 1, borderRadius: '0.75rem' }
-                }}
-              >
-                {featureItems.map((item) => (
-                  <MenuListItem
-                    key={item.path}
-                    component={Link}
-                    to={item.path}
-                    onClick={() => handleMenuClose('features')}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </MenuListItem>
-                ))}
-              </MuiMenu>
-
-              {/* Tools Dropdown */}
-              <DropdownButton
-                onClick={handleMenuOpen('tools')}
-                endIcon={<ChevronDown size={16} />}
-              >
-                Tools
-              </DropdownButton>
-              <MuiMenu
-                anchorEl={anchorEls.tools}
-                open={Boolean(anchorEls.tools)}
-                onClose={() => handleMenuClose('tools')}
-                PaperProps={{
-                  elevation: 3,
-                  sx: { mt: 1, borderRadius: '0.75rem' }
-                }}
-              >
-                {toolItems.map((item) => (
-                  <MenuListItem
-                    key={item.path}
-                    component={Link}
-                    to={item.path}
-                    onClick={() => handleMenuClose('tools')}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </MenuListItem>
-                ))}
-              </MuiMenu>
-
-              {/* Admin Dropdown */}
-              <DropdownButton
-                onClick={handleMenuOpen('admin')}
-                endIcon={<ChevronDown size={16} />}
-              >
-                Admin
-              </DropdownButton>
-              <MuiMenu
-                anchorEl={anchorEls.admin}
-                open={Boolean(anchorEls.admin)}
-                onClose={() => handleMenuClose('admin')}
-                PaperProps={{
-                  elevation: 3,
-                  sx: { mt: 1, borderRadius: '0.75rem' }
-                }}
-              >
-                {adminItems.map((item) => (
-                  <MenuListItem
-                    key={item.path}
-                    component={Link}
-                    to={item.path}
-                    onClick={() => handleMenuClose('admin')}
-                    sx={item.danger ? { color: 'red' } : {}}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </MenuListItem>
-                ))}
-              </MuiMenu>
-
-              <LoginButton
-                component={Link}
-                to="/login"
-                startIcon={<LogIn size={18} />}
-              >
-                Login
-              </LoginButton>
+                  Login
+                </LoginButton>
+              )}
             </Box>
 
             {/* Mobile menu button */}
@@ -334,92 +352,78 @@ const Navbar = ({ project }) => {
         }}
       >
         <MobileNavList>
-          {/* Main Nav Items */}
-          {mainNavItems.map((item) => (
-            <MobileNavItem key={item.path} disablePadding>
-              <MobileNavLink
-                to={item.path}
-                active={location.pathname === item.path}
-                onClick={() => setIsOpen(false)}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </MobileNavLink>
-            </MobileNavItem>
-          ))}
+          {user ? (
+            <>
+              {/* User Profile Section */}
+              <Box sx={{ p: 2, textAlign: 'center' }}>
+                <Avatar 
+                  sx={{ 
+                    width: 64, 
+                    height: 64, 
+                    bgcolor: '#3a86ff',
+                    fontSize: '1.5rem',
+                    margin: '0 auto'
+                  }}
+                >
+                  {user.firstname?.[0] || user.username?.[0]}
+                </Avatar>
+                <Typography variant="subtitle1" sx={{ mt: 1, fontWeight: 500 }}>
+                  {user.firstname || user.username}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {user.email}
+                </Typography>
+              </Box>
 
-          <Divider sx={{ my: 1 }} />
-          
-          {/* Features Section */}
-          <ListItem sx={{ pl: 3, py: 1 }}>
-            <Typography variant="subtitle2" color="textSecondary">Features</Typography>
-          </ListItem>
-          {featureItems.map((item) => (
-            <MobileNavItem key={item.path} disablePadding>
-              <MobileNavLink
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </MobileNavLink>
-            </MobileNavItem>
-          ))}
+              <Divider sx={{ my: 1 }} />
 
-          <Divider sx={{ my: 1 }} />
-          
-          {/* Tools Section */}
-          <ListItem sx={{ pl: 3, py: 1 }}>
-            <Typography variant="subtitle2" color="textSecondary">Tools</Typography>
-          </ListItem>
-          {toolItems.map((item) => (
-            <MobileNavItem key={item.path} disablePadding>
-              <MobileNavLink
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </MobileNavLink>
-            </MobileNavItem>
-          ))}
+              {/* Navigation Items */}
+              {navItems.map((item) => (
+                <MobileNavItem key={item.path} disablePadding>
+                  <MobileNavLink
+                    to={item.path}
+                    isactive={isActivePath(item.path) ? 'true' : 'false'}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </MobileNavLink>
+                </MobileNavItem>
+              ))}
 
-          <Divider sx={{ my: 1 }} />
-          
-          {/* Admin Section */}
-          <ListItem sx={{ pl: 3, py: 1 }}>
-            <Typography variant="subtitle2" color="textSecondary">Admin</Typography>
-          </ListItem>
-          {adminItems.map((item) => (
-            <MobileNavItem key={item.path} disablePadding>
+              <Divider sx={{ my: 1 }} />
+
+              {/* Logout */}
+              <MobileNavItem disablePadding>
+                <MobileNavLink
+                  to="#"
+                  onClick={() => {
+                    setIsOpen(false);
+                    handleLogout();
+                  }}
+                  sx={{ color: 'red' }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40, color: 'red' }}>
+                    <LogOut size={20} />
+                  </ListItemIcon>
+                  <ListItemText primary="Logout" />
+                </MobileNavLink>
+              </MobileNavItem>
+            </>
+          ) : (
+            <MobileNavItem disablePadding>
               <MobileNavLink
-                to={item.path}
+                to="/login"
                 onClick={() => setIsOpen(false)}
-                sx={item.danger ? { color: 'red' } : {}}
+                sx={{ color: '#3a86ff' }}
               >
-                <ListItemIcon sx={{ minWidth: 40, color: item.danger ? 'red' : 'inherit' }}>
-                  {item.icon}
+                <ListItemIcon sx={{ minWidth: 40, color: '#3a86ff' }}>
+                  <LogIn size={20} />
                 </ListItemIcon>
-                <ListItemText primary={item.label} />
+                <ListItemText primary="Login" />
               </MobileNavLink>
             </MobileNavItem>
-          ))}
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Login */}
-          <MobileNavItem disablePadding>
-            <MobileNavLink
-              to="/login"
-              onClick={() => setIsOpen(false)}
-              sx={{ color: '#3a86ff' }}
-            >
-              <ListItemIcon sx={{ minWidth: 40, color: '#3a86ff' }}>
-                <LogIn size={20} />
-              </ListItemIcon>
-              <ListItemText primary="Login" />
-            </MobileNavLink>
-          </MobileNavItem>
+          )}
         </MobileNavList>
       </Drawer>
     </>

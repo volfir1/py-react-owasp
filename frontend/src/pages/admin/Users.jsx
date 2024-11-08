@@ -7,7 +7,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { Search, Users as UsersIcon } from 'lucide-react';
-import { useToast } from '../components/Snackbar';
+import { useToast } from '../../components/Snackbar';
 import '../styles/users.css';
 
 const Users = () => {
@@ -111,8 +111,8 @@ const Users = () => {
       <div className="content-wrapper">
         <div className="header-section">
           <div className="d-flex align-items-center gap-2 mb-4">
-            <UsersIcon size={28} className="text-primary" />
-            <h1 className="heading-text">User Management</h1>
+            
+            <h1 className="heading-text"><UsersIcon size={28} className="text-primary" /> User Management</h1>
           </div>
         </div>
 

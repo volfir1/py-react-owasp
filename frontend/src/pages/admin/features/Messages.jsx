@@ -13,7 +13,7 @@ import {
   Key as KeyIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { useToast } from '../../components/Snackbar'; // Adjust path as needed
+import { useToast } from '../../../components/Snackbar'; // Adjust path as needed
 
 const Messages = () => {
   const [message, setMessage] = useState('');

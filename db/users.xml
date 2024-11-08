@@ -1,38 +1,151 @@
-<?xml version="1.0" encoding="utf-8"?>
-<users>
-    <user id="0">
-        <username>admin</username>
-        <firstname>Adminiistrator</firstname>
-        <lastname>Administrator</lastname>
-        <password>Y3RFgwZP$v6v#D</password>
-        <email>admin@localhost</email>
-    </user>
-    <user id="2">
-        <username>guest</username>
-        <firstname>Guest</firstname>
-        <lastname>Guest</lastname>
-        <password>guest</password>
-        <email>guest@localhost</email>
-    </user>
-    <user id="3">
-        <username>loella</username>
-        <firstname>Ella</firstname>
-        <lastname>Lo</lastname>
-        <password>babygirl</password>
-        <email>loella@localhost</email>
-    </user>
-    <user id="4">
-        <username>weitzel</username>
-        <firstname>Timothy</firstname>
-        <lastname>Weitzel</lastname>
-        <password>123456</password>
-        <email>weitzel@localhost</email>
-    </user>
-    <user id="5">
-        <username>Daniel</username>
-        <firstname>Timothy</firstname>
-        <lastname>Weitzel</lastname>
-        <password>123456</password>
-        <email>weitzel@localhost</email>
-    </user>
-</users>
+<?xml version="1.0" encoding="UTF-8"?>
+<system>
+    <roles>
+        <role id="admin">
+            <name>Administrator</name>
+            <description>System administrator with full access rights</description>
+            <permissions>
+                <permission>VIEW_DASHBOARD</permission>
+                <permission>MANAGE_USERS</permission>
+                <permission>VIEW_USERS</permission>
+                <permission>EDIT_USERS</permission>
+                <permission>DELETE_USERS</permission>
+                <permission>VIEW_SYSTEM_STATS</permission>
+                <permission>MANAGE_SETTINGS</permission>
+            </permissions>
+            <capabilities>
+                <capability>ACCESS_ADMIN_PANEL</capability>
+                <capability>USER_MANAGEMENT</capability>
+                <capability>FULL_SYSTEM_ACCESS</capability>
+            </capabilities>
+        </role>
+        
+        <role id="student">
+            <name>Student</name>
+            <description>Regular student user with basic access rights</description>
+            <permissions>
+                <permission>VIEW_DASHBOARD</permission>
+                <permission>VIEW_PROFILE</permission>
+                <permission>EDIT_PROFILE</permission>
+                <permission>VIEW_GRADES</permission>
+                <permission>VIEW_ANNOUNCEMENTS</permission>
+            </permissions>
+            <capabilities>
+                <capability>ACCESS_STUDENT_PANEL</capability>
+                <capability>BASIC_COMMUNICATION</capability>
+            </capabilities>
+        </role>
+    </roles>
+
+    <users>
+        <user id="0" role="admin">
+            <username>admin</username>
+            <firstname>Administrator</firstname>
+            <lastname>Administrator</lastname>
+            <password>Y3RFgwZP$v6v#D</password>
+            <email>admin@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+        
+        <user id="2" role="student">
+            <username>guest</username>
+            <firstname>Guest</firstname>
+            <lastname>Guest</lastname>
+            <password>guest</password>
+            <email>guest@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+        
+        <user id="3" role="student">
+            <username>loella</username>
+            <firstname>Ella</firstname>
+            <lastname>Lo</lastname>
+            <password>babygirl</password>
+            <email>loella@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+        
+        <user id="4" role="admin">
+            <username>weitzel</username>
+            <firstname>Timothy</firstname>
+            <lastname>Weitzel</lastname>
+            <password>123456</password>
+            <email>weitzel@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+        
+        <user id="5" role="student">
+            <username>Daniel</username>
+            <firstname>Timothy</firstname>
+            <lastname>Weitzel</lastname>
+            <password>123456</password>
+            <email>weitzel@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+        
+        <user id="6" role="student">
+            <username>Anrei</username>
+            <firstname>Timothy</firstname>
+            <lastname>Weitzel</lastname>
+            <password>123456</password>
+            <email>weitzel@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+         <user id="7" role="student">
+            <username>Dan</username>
+            <firstname>Timothy</firstname>
+            <lastname>Weitzel</lastname>
+            <password>123456</password>
+            <email>weitzel@localhost</email>
+            <status>active</status>
+            <created_date>2024-01-01</created_date>
+        </user>
+    </users>
+
+    <role_assignments>
+        <assignment user_id="0" role_id="admin" />
+        <assignment user_id="4" role_id="admin" />
+        <assignment user_id="2" role_id="student" />
+        <assignment user_id="3" role_id="student" />
+        <assignment user_id="5" role_id="student" />
+        <assignment user_id="6" role_id="student" />
+    </role_assignments>
+
+    <role_hierarchies>
+        <hierarchy>
+            <parent_role>admin</parent_role>
+            <child_roles>
+                <role>student</role>
+            </child_roles>
+        </hierarchy>
+    </role_hierarchies>
+
+    <routes>
+        <public>
+            <route path="/login" component="Login">
+                <meta>
+                    <title>Sign in</title>
+                    <project>DSVPWA</project>
+                </meta>
+            </route>
+            <route path="/unauthorized" component="Unauthorized"/>
+        </public>
+        
+        <protected>
+            <route path="/api/*">
+                <middleware>auth_required</middleware>
+                <cors>
+                    <origin>http://localhost:3000</origin>
+                    <methods>GET, POST, OPTIONS</methods>
+                    <credentials>true</credentials>
+                </cors>
+            </route>
+        </protected>
+    </routes>
+</system>
