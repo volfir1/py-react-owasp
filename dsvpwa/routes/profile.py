@@ -152,3 +152,23 @@ def update_profile():
             'status': 'error',
             'message': 'Internal server error'
         }), 500
+
+
+@app.route('/api/users/all', methods=['GET'])
+@login_required
+def get_all_users():
+    # Your code to fetch all users from XML
+    return jsonify({
+        "status": "success",
+        "users": users_list
+    })
+
+@app.route('/api/users/search', methods=['GET'])
+@login_required
+def search_users():
+    user_id = request.args.get('id')
+    # Your code to search users by ID
+    return jsonify({
+        "status": "success",
+        "users": found_users
+    })

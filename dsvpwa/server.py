@@ -8,6 +8,7 @@ import sqlite3
 from utils.auth import auth_required
 from utils.xml_loader import load_users_from_xml
 from routes.auth import auth_bp
+from routes.users import users_bp
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -99,8 +100,8 @@ CORS(app,
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api')
-
-# Setup database
+app.register_blueprint(users_bp, url_prefix='/api')
+# Setup databasex``
 app.teardown_appcontext(close_db)
 
 @app.before_request
